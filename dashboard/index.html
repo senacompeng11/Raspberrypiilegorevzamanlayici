@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Raspberry ESP IoT Dashboard</title>
+  <link rel="stylesheet" href="/static/style.css"/>
+  <script src="/static/script.js?v=2"></script>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<header class="hdr">
+  <div class="logo">
+    <div class="logo-box">
+      <svg viewBox="0 0 24 24">
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+      </svg>
+    </div>
+    <span class="logo-txt">Raspberry ESP</span> IoT
+  </div>
+  <div class="hdr-r">
+    <div class="live"><span class="dot"></span> Canlı</div>
+    <div id="clk">--:--:--</div>
+  </div>
+</header>
+
+<!-- ===== MAIN ===== -->
+<div class="main">
+
+  <!-- ÜST SATIR: LDR (geniş sol) + FIFO (sağ) -->
+  <div class="top-row">
+
+    <!-- ESP2 — LAPTOP ANİMASYON KARTI (büyük, sol) -->
+    <div class="card card-ldr">
+      <div class="ctitle">Işık / LDR Sensörü</div>
+
+      <div class="esp2-hdr">
+        <div class="esp-badge" style="background:#f5f3ff;border-color:#ddd6fe;color:#5b21b6;">
+          <span class="bd" style="background:#7c3aed;"></span>ESP2 — LDR
+        </div>
+        <div class="ldr-ind dk" id="ldrInd">
+          <span class="ldot"></span>
+          <span id="ldrTxt">Karanlık</span>
+        </div>
+      </div>
+
+      <!-- LAPTOP SAHNESİ -->
+      <div class="scene">
+        <div class="laptop-wrap">
+          <div class="lid-back" id="lidBack"></div>
+          <div class="lid" id="lid">
+            <div class="wcam"></div>
+            <div class="scr" id="scr">
+              <div class="scr-cnt" id="scrCnt">
+                <div class="scr-top-bar">
+                  <span class="scr-dot r"></span>
+                  <span class="scr-dot y"></span>
+                  <span class="scr-dot g"></span>
+                </div>
+                <div class="scr-icon-area">
+                  <div class="scr-hw-logo">
+                    <svg viewBox="0 0 40 14" fill="none">
+                      <text x="0" y="11" font-family="sans-serif" font-size="10" font-weight="600" fill="rgba(255,255,255,0.85)" letter-spacing="1">DÜZCE</text>
+                    </svg>
+                  </div>
+                  <div class="scr-badge">ESP2 · IOT AKTIF</div>
+                  <div class="scr-pulse">
+                    <span></span><span></span><span></span>
+                  </div>
+                  <div class="scr-status">IŞIK ALGILANDI</div>
+                </div>
+              </div>
+              <div id="scrOff" class="scr-off">
+                <div class="sleep-dot"></div>
+              </div>
+            </div>
+          </div>
+          <div class="hinge-bar"></div>
+          <div class="base">
+            <div class="tpad"></div>
+            <div class="kbd-row"><div class="kbd-keys"></div></div>
+          </div>
+          <div class="stand"></div>
+          <div class="glow off" id="glow"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FIFO SCHEDULER KARTI (sağ) -->
+    <div class="card card-fifo">
+      <div class="ctitle">FIFO Zamanlayıcı</div>
+
+      <div class="qdisp">
+        <div class="qval">FIFO</div>
+        <div class="qlbl">First In — First Out</div>
+      </div>
+
+      <div class="cur empty" id="curBox">
+        <div class="cur-hdr">
+          <span class="rdot" id="rdot" style="display:none"></span>
+          Şu an işleniyor
+        </div>
+        <div class="cur-name idle" id="curName">— Boşta —</div>
+        <div class="cur-dev" id="curDev"></div>
+        <div class="pbar" id="pbWrap" style="display:none">
+          <div class="pbarf" id="pbFill" style="width:100%"></div>
+        </div>
+      </div>
+
+      <div class="qlbl2">Kuyruk</div>
+
+      <!-- ESP2 bekleme banner — ESP1 çalışırken ESP2 kuyruktaysa gösterilir -->
+      <div id="esp2WaitBanner" style="display:none;align-items:center;gap:8px;padding:9px 12px;background:#fef9c3;border:1px solid #fde68a;border-radius:10px;margin-bottom:10px;">
+        <span style="font-size:15px;">⏳</span>
+        <div style="flex:1;">
+          <div style="font-size:11px;font-weight:700;color:#92400e;">ESP2 Sıra Bekliyor</div>
+          <div style="font-size:10px;color:#a16207;margin-top:2px;">Görev: <strong id="esp2WaitTask">—</strong> · ESP1 tamamlansın</div>
+        </div>
+        <span style="font-size:10px;font-weight:700;padding:3px 8px;background:#fde68a;color:#92400e;border-radius:99px;">FIFO</span>
+      </div>
+
+      <div class="qitems" id="qItems">
+        <div class="qempty">Kuyruk boş</div>
+      </div>
+    </div>
+
+  </div><!-- /top-row -->
+
+  <!-- ORTA SATIR: SICAKLIK (tam genişlik) -->
+  <div class="mid-row">
+
+    <!-- ESP1 — SICAKLIK KARTI -->
+    <div class="card card-temp">
+      <div class="ctitle">Sıcaklık Sensörü</div>
+
+      <div class="temp-inner">
+
+        <!-- SOL: Laptop (Düzce Üniversitesi ekranı) -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+          <div class="esp-badge">
+            <span class="bd"></span>ESP1 — DHT11
+          </div>
+
+          <div class="laptop2-wrap">
+            <!-- Duman animasyonu -->
+            <div class="smoke-container smoke-off" id="smokeBox">
+              <div class="smoke-puff sp1"></div>
+              <div class="smoke-puff sp2"></div>
+              <div class="smoke-puff sp3"></div>
+              <div class="smoke-puff sp4"></div>
+              <div class="smoke-puff sp5"></div>
+              <div class="smoke-puff sp6"></div>
+            </div>
+
+            <!-- Laptop kapağı -->
+            <div class="lid2">
+              <div class="scr2">
+                <div class="duzce-screen">
+                  <div class="duzce-campus-bg"></div>
+                  <div class="duzce-sky-clouds">
+                    <div class="duzce-cloud c1"></div>
+                    <div class="duzce-cloud c2"></div>
+                    <div class="duzce-cloud c3"></div>
+                  </div>
+                  <div class="duzce-flag"></div>
+                  <div class="duzce-modal">
+                    <div class="duzce-logo-area">
+                      <svg class="duzce-logo-icon" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 2 L20 7 L20 17 L12 22 L4 17 L4 7 Z" stroke="rgba(255,255,255,0.85)" stroke-width="1.5" fill="rgba(255,255,255,0.1)"/>
+                        <path d="M8 12 Q12 8 16 12 Q12 16 8 12Z" fill="rgba(255,255,255,0.7)"/>
+                      </svg>
+                      <div class="duzce-uni-name">DÜZCE<br>ÜNİVERSİTESİ</div>
+                    </div>
+                    <div class="duzce-divider"></div>
+                    <div class="duzce-field">
+                      <div class="duzce-field-dot"></div>
+                      <span class="duzce-field-txt">Kullanıcı Adı</span>
+                    </div>
+                    <div class="duzce-field">
+                      <div class="duzce-field-dot"></div>
+                      <span class="duzce-field-txt">Parola</span>
+                    </div>
+                    <div class="duzce-login-btn">Giriş Yap</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="base2"><div class="tpad2"></div></div>
+            <div class="stand2"></div>
+             <div id="extFan" style="position:absolute; right:-95px; top:50px;">
+              <svg viewBox="0 0 20 20" width="80" height="80">
+                <g id="extFanBladesG" style="transform-origin:10px 10px;">
+                  <ellipse cx="10" cy="5" rx="3" ry="5.5" fill="#60a5fa"/>
+                  <ellipse cx="15.33" cy="12.5" rx="3" ry="5.5" fill="#3b82f6"
+                    transform="rotate(120,10,10)"/>
+                  <ellipse cx="4.67" cy="12.5" rx="3" ry="5.5" fill="#93c5fd"
+                    transform="rotate(240,10,10)"/>
+                </g>
+                <circle cx="10" cy="10" r="2.5" fill="#1d4ed8"/>
+              </svg>
+            </div>
+          </div>
+
+          <div style="font-size:11px;color:#888;margin-top:2px;">
+            Son: <span id="e1t">—</span>
+          </div>
+        </div>
+
+        <!-- ORTA: Sıcaklık göstergesi + aktüatör durumları -->
+        <div class="temp-col">
+          <div class="temp-dial-wrap">
+            <svg class="temp-dial-svg" width="130" height="130" viewBox="0 0 130 130">
+              <path class="temp-arc-bg"
+                d="M 20 90 A 50 50 0 1 1 110 90"
+                fill="none" stroke="#e2e8f0" stroke-width="9" stroke-linecap="round"
+              />
+              <path class="temp-arc-fg" id="tempArc"
+                d="M 20 90 A 50 50 0 1 1 110 90"
+                fill="none" stroke="#3b82f6" stroke-width="9" stroke-linecap="round"
+                stroke-dasharray="219.9" stroke-dashoffset="219.9"
+              />
+              <text id="tNum" class="temp-center-lbl" x="65" y="68">—</text>
+              <text class="temp-center-unit-lbl" x="65" y="86">°C</text>
+            </svg>
+          </div>
+
+          <span class="temp-badge nb" id="tempBadge">Bekleniyor</span>
+
+          <div class="temp-detail-rows">
+            <div class="arow">
+              <div class="arow-left">
+                <div class="arow-ico" style="background:#eff6ff;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                  </svg>
+                </div>
+                <span class="arow-name">Buzzer</span>
+              </div>
+              <span class="atag off" id="bzzr">KAPALI</span>
+            </div>
+            <div class="arow">
+              <div class="arow-left">
+                <div class="fan-inline" id="fanIconWrap">
+                  <svg class="fan-svg-mini" id="fanIconSvg" viewBox="0 0 20 20">
+                    <g class="fan-blades-g" id="fanBladesG">
+                      <ellipse cx="10" cy="5" rx="3" ry="5.5" fill="#60a5fa"/>
+                      <ellipse cx="15.33" cy="12.5" rx="3" ry="5.5" fill="#3b82f6"
+                        transform="rotate(120,10,10)"/>
+                      <ellipse cx="4.67" cy="12.5" rx="3" ry="5.5" fill="#93c5fd"
+                        transform="rotate(240,10,10)"/>
+                    </g>
+                    <circle cx="10" cy="10" r="2.5" fill="#1d4ed8"/>
+                  </svg>
+                </div>
+                <span class="arow-name" style="margin-left:8px;">Fan</span>
+              </div>
+              <span class="atag off" id="fanst">KAPALI</span>
+            </div>
+          </div>
+
+          <div>
+            <span class="task-t n" id="e1task">bekleniyor</span>
+          </div>
+        </div>
+
+        <!-- SAĞ: Buzzer animasyonu -->
+        <div class="buzzer-col">
+          <div class="buzzer-label">Buzzer Alarmı</div>
+
+          <div class="buzzer-scene">
+            <div class="b-ring r1 off" id="bRing1"></div>
+            <div class="b-ring r2 off" id="bRing2"></div>
+            <div class="b-ring r3 off" id="bRing3"></div>
+
+            <div class="b-rays" id="bRays">
+              <div class="b-ray r1"></div>
+              <div class="b-ray r2"></div>
+              <div class="b-ray r3"></div>
+              <div class="b-ray r4"></div>
+              <div class="b-ray r5"></div>
+            </div>
+
+            <div class="b-body" id="bBody">
+              <div class="b-shine"></div>
+            </div>
+            <div class="b-base"></div>
+          </div>
+
+          <div class="buzzer-status-txt boff" id="bStatus">KAPALI</div>
+
+          <div class="buzzer-thr">
+            <span style="color:#f97316;">▲ 25°C</span> Buzzer Açık<br>
+            <span style="color:#ef4444;">▲ 28°C</span> Fan Devreye Girer
+          </div>
+        </div>
+
+      </div><!-- /temp-inner -->
+    </div><!-- /card-temp -->
+
+  </div><!-- /mid-row -->
+
+  <!-- ALT SATIR -->
+  <div class="bot">
+
+    <div class="card" style="overflow:hidden;">
+      <div class="ctitle">Tamamlanan Görevler</div>
+      <table class="ltable">
+        <thead>
+          <tr>
+            <th>Zaman</th>
+            <th>Cihaz</th>
+            <th>Görev</th>
+            <th>Durum</th>
+          </tr>
+        </thead>
+        <tbody id="logB">
+          <tr class="lempty">
+            <td colspan="5">Henüz tamamlanan görev yok</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">Sistem Durumu</div>
+      <div class="srow">
+        <div class="sr">
+          <span class="sr-l">ESP1 Bağlantı</span>
+          <span class="sr-v" id="e1conn">—</span>
+        </div>
+        <div class="sr">
+          <span class="sr-l">ESP2 Bağlantı</span>
+          <span class="sr-v" id="e2conn">—</span>
+        </div>
+        <div class="sr">
+          <span class="sr-l">Aktif Görev</span>
+          <span class="sr-v" id="actv">—</span>
+        </div>
+        <div class="sr">
+          <span class="sr-l">Laptop Kapağı</span>
+          <span class="sr-v" id="lidSt">Kapalı</span>
+        </div>
+        <div class="sr">
+          <span class="sr-l">ESP1 Toplam Görev</span>
+          <span class="sr-v" id="e1tot">0</span>
+        </div>
+        <div class="sr">
+          <span class="sr-l">ESP2 Toplam Görev</span>
+          <span class="sr-v" style="color:#5b21b6;" id="e2tot">0</span>
+        </div>
+      </div>
+    </div>
+
+<div class="card pi-card">
+        <div class="ctitle">Raspberry Pi Sistem Kaynakları</div>
+
+        <div class="pi-grid">
+
+          <div class="pi-box">
+            <div class="pi-box-top">
+              <div>
+                <div class="pi-label">CPU Kullanımı</div>
+                <div class="pi-value" id="piCpu">—</div>
+                <div class="pi-small">İşlemci yükü</div>
+              </div>
+              <span class="pi-badge ok" id="piCpuBadge">Normal</span>
+            </div>
+            <div class="pi-bar"><div id="piCpuBar"></div></div>
+          </div>
+
+          <div class="pi-box">
+            <div class="pi-box-top">
+              <div>
+                <div class="pi-label">RAM Kullanımı</div>
+                <div class="pi-value" id="piRam">—</div>
+                <div class="pi-small" id="piRamText">— / —</div>
+              </div>
+              <span class="pi-badge ok" id="piRamBadge">Normal</span>
+            </div>
+            <div class="pi-bar"><div id="piRamBar"></div></div>
+          </div>
+
+          <div class="pi-box">
+            <div class="pi-box-top">
+              <div>
+                <div class="pi-label">Disk Kullanımı</div>
+                <div class="pi-value" id="piDisk">—</div>
+                <div class="pi-small" id="piDiskText">— / —</div>
+              </div>
+              <span class="pi-badge ok" id="piDiskBadge">Normal</span>
+            </div>
+            <div class="pi-bar"><div id="piDiskBar"></div></div>
+          </div>
+
+        </div>
+      </div>
+</div><!-- /main -->
+
+<script src="/static/script.js"></script>
+</body>
+</html>
